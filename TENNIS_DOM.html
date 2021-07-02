@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head> 
+    <meta charset="utf-8">
+    <style>
+
+        .gameBox {
+            padding: 3px;
+        }
+
+        .startButton {
+            float: left;
+            font-size: 25px;
+            width: 100px;
+            margin-top: 20px;
+        }
+
+        .scoreBox {
+            margin: 0px auto -10px auto;
+            width: 150px;
+            font-size: 70px;
+            text-align: center;
+        }
+
+        .court {
+            position: relative;
+            border: solid black 1px;
+            background-color: #e2a940;
+        }
+
+        .ball {
+            position: absolute;
+            background-color: #e60606;
+            border-radius: 50%;
+        }
+
+        .leftRacquet {
+            position: absolute;
+            background-color: #109910;
+        }
+
+        .rightRacquet {
+            position: absolute;
+            background-color: #120fc5;
+        }
+                
+    </style> 
+</head>
+<body> 
+
+  <script>
+    
+    'use strict';
+
+    var courtWidth = 640; //длина корта
+    var courtHeight = 380; //ширина корта
+    var ballRadius = 15; //радиус мяча
+    var ballSpeed = 4; //скорость движения мяча
+    var racquetWidth = 10; //ширина ракеток
+    var racquetHeight = 100; //высота ракеток
+    var racquetSpeed = 6; //скорость движения ракеток
+    var scoreRight = 0; //счет и начальное значение правого игрока
+    var scoreLeft = 0; //счет и начальное значение  игрока
+
+    var upPressed = false; //переменные для определения нажатых кнопок
+    var downPressed = false; //используем для управления ракетками
+    var shiftPressed = false;
+    var ctrlPressed = false;
+
+    var gameBox = document.createElement('div'); //контейнер для игры
+    gameBox.className ='gameBox';
+    gameBox.style.width = courtWidth + "px";
+    document.body.appendChild(gameBox);
+
+    var startButton = document.createElement("input") //кнопка старта
+    startButton.type = 'button';
+    startButton.value = 'старт!';
+    startButton.className ='startButton';
+    gameBox.appendChild(startButton);
+    startButton.onclick = start;
+
+    var scoreBox = document.createElement("div") //табло со счетом
+    scoreBox.className ='scoreBox';
+    gameBox.appendChild(scoreBox);   
+
+    var court = document.createElement('div'); //теннисный корт
+    court.className ='court';
+    court.style.width = courtWidth + "px";
+    court.style.height = courtHeight + "px";
+    gameBox.appendChild(court);
+
+    var ball = document.createElement('div'); //мяч
+    ball.className='ball';
+    ball.style.width = 2*ballRadius + "px";
+    ball.style.height = 2*ballRadius + "px";
+    court.appendChild(ball);
+
+    var leftRacquet = document.createElement('div'); //левая ракетка
+    leftRacquet.className='leftRacquet';
+    leftRacquet.style.width = racquetWidth + "px";
+    leftRacquet.style.height = racquetHeight + "px";
+    court.appendChild(leftRacquet);
+
+    var rightRacquet = document.createElement('div'); //правая ракетка
+    rightRacquet.className='rightRacquet';
+    rightRacquet.style.width = racquetWidth + "px";
+    rightRacquet.style.height = racquetHeight + "px";
+    court.appendChild(rightRacquet);
+
+    var ballH = { //хэш, содержащий информацию о мяче
+        posX: courtWidth/2 - ballRadius,
+        posY: courtHeight/2 - ballRadius,
+        speedX: 0, //скорость движения мяча
+        speedY: 0,
+        width: ballRadius*2, //размеры мяча
+        height: ballRadius*2,
+
+        update : function() {
+            //выносим мяч на отдельный слой, используя "нулевой хак" для аппаратного ускорения анимации
+            ball.style.transform="translateX("+this.posX+"px) translateY("+this.posY+"px) translateZ(0)";
+        }
+    }
+
+    var leftRacquetH = { //хэш, содержащий информацию о левой ракетке
+        posX: 0,
+        posY: courtHeight/2 - racquetHeight/2,
+        speed: 0,
+
+        update : function() {
+            leftRacquet.style.transform="translateX("+this.posX+"px) translateY("+this.posY+"px) translateZ(0)";
+        }
+    }
+
+    var rightRacquetH = { //хэш, содержащий информацию о правой ракетке
+        posX: courtWidth - racquetWidth,
+        posY: courtHeight/2 - racquetHeight/2,
+        speed: 0,
+
+        update : function() {
+            rightRacquet.style.transform="translateX("+this.posX+"px) translateY("+this.posY+"px) translateZ(0)";
+        }
+    }
+
+    window.addEventListener("keydown", keyDownRacquet, false); //обработчики событий для управления ракетками
+    window.addEventListener("keyup", keyUpRacquet, false);
+
+    function keyDownRacquet(EO) {
+        EO = EO || window.event;
+        EO.preventDefault();
+
+        if(EO.keyCode == 38) {
+           upPressed = true;
+        }
+        else if(EO.keyCode == 40) {
+           downPressed = true;
+        }
+
+        if(EO.keyCode == 16) {
+           shiftPressed = true;
+        }
+        else if(EO.keyCode == 17) {
+           ctrlPressed = true;
+        }
+    }
+
+    function keyUpRacquet(EO) {
+        EO = EO || window.event;
+        EO.preventDefault();
+
+        if(EO.keyCode == 38) {
+           upPressed = false;
+        }
+        else if(EO.keyCode == 40) {
+           downPressed = false;
+        }
+
+        if(EO.keyCode == 16) {
+           shiftPressed = false;
+        }
+        else if(EO.keyCode == 17) {
+           ctrlPressed = false;
+        }
+    }
+
+    function score() { //функция для ведения счета
+        scoreBox.innerHTML = scoreRight + ':' + scoreLeft;
+    }
+
+    function randomDiap(n,m) { //функция генерации случайного числа
+        return Math.floor(Math.random()*(m-n+1))+n;
+    }
+
+    function start() {
+        ballH.posX = courtWidth/2 - ballRadius; //начальное положение мяча во время старта
+        ballH.posY = courtHeight/2 - ballRadius;
+        ballH.speedX = ballSpeed*((randomDiap(ballSpeed/2,ballSpeed*2) < ballSpeed) ? -1 : 1); //запускаем мяч в случайном направлении 
+	    ballH.speedY = ballSpeed/randomDiap(ballSpeed/2,ballSpeed*2)*((randomDiap(ballSpeed/2,ballSpeed*2) < ballSpeed) ? -1 : 1);
+        leftRacquetH.speed = racquetSpeed;
+        rightRacquetH.speed = racquetSpeed;
+    }
+
+    requestAnimationFrame(tick);
+
+    function tick () {
+        //запускаем мяч
+        ballH.posX += ballH.speedX;
+        ballH.posY += ballH.speedY;
+
+        //движение и положение левой ракетки
+        if (shiftPressed && leftRacquetH.posY > 0) {
+            leftRacquetH.posY -= leftRacquetH.speed; //ракетка движется вверх
+        } else if (ctrlPressed && leftRacquetH.posY + racquetHeight < courtHeight) {
+            leftRacquetH.posY += leftRacquetH.speed; //ракетка движется вниз
+        }
+        // вылетела ли ракетка ниже пола?
+	    if (leftRacquetH.posY + racquetHeight > courtHeight) {
+		    leftRacquetH.posY = courtHeight - racquetHeight;
+	    }
+   	    // вылетела ли ракетка выше потолка?
+	    if (leftRacquetH.posY < 0) {
+		    leftRacquetH.posY = 0;
+	    }
+
+        //движение и положение правой ракетки
+        if (upPressed && rightRacquetH.posY > 0) {
+            rightRacquetH.posY -= rightRacquetH.speed;
+        } else if (downPressed && rightRacquetH.posY + racquetHeight < courtHeight) {
+            rightRacquetH.posY += rightRacquetH.speed;
+        }
+        // вылетела ли ракетка ниже пола?
+	    if (rightRacquetH.posY + racquetHeight > courtHeight) {
+		    rightRacquetH.posY = courtHeight - racquetHeight;
+	    }
+   	    // вылетела ли ракетка выше потолка?
+	    if (rightRacquetH.posY < 0) {
+		    rightRacquetH.posY = 0;
+	    }       
+
+        //долетел ли мяч до правой стены (гол)
+        if ((ballH.posY + ballH.height < rightRacquetH.posY || ballH.posY > (rightRacquetH.posY + racquetHeight)) && ballH.posX+ballH.width > courtWidth) {
+		    scoreRight += 1; //гооол!
+            score ();
+		    ballH.speedX = 0; 
+		    ballH.speedY = 0;
+            leftRacquetH.speed = 0;
+            rightRacquetH.speed = 0;
+            ballH.posX = courtWidth - ballH.width;
+            
+            //долетел ли мяч до правой ракетки, ракетка отбивает мяч
+	    } else if ((ballH.posY + ballH.height > rightRacquetH.posY && ballH.posY < (rightRacquetH.posY + racquetHeight)) && ballH.posX+ballH.width > courtWidth) {
+		    ballH.speedX =- ballH.speedX;
+            ballH.posX = courtWidth - racquetWidth - ballH.width;
+	    }
+
+        //долетел ли мяч до левой стены (гол)
+        if ((ballH.posY + ballH.height < leftRacquetH.posY || ballH.posY > (leftRacquetH.posY + racquetHeight)) && ballH.posX < 0) {
+		    scoreLeft += 1; //гооол!
+            score ();
+		    ballH.speedX = 0; 
+		    ballH.speedY = 0;
+            leftRacquetH.speed = 0;
+            rightRacquetH.speed = 0;
+		    ballH.posX = 0;
+
+            //долетел ли мяч до левой ракетки, ракетка отбивает мяч
+	    } else if ((ballH.posY + ballH.height > leftRacquetH.posY && ballH.posY < (leftRacquetH.posY + racquetHeight)) && ballH.posX < racquetWidth) {
+		    ballH.speedX =- ballH.speedX;
+            ballH.posX = racquetWidth;
+	    }
+
+        // вылетел ли мяч ниже пола?
+        if (ballH.posY + ballH.height > courtHeight) {
+            ballH.speedY =- ballH.speedY;
+            ballH.posY = courtHeight - ballH.height;
+        }
+
+        // вылетел ли мяч выше потолка?
+        if (ballH.posY < 0) {
+            ballH.speedY =- ballH.speedY;
+            ballH.posY = 0;
+        }
+
+        ballH.update();
+        leftRacquetH.update();
+        rightRacquetH.update();
+        requestAnimationFrame(tick);       
+    }
+
+    score ();
+    ballH.update();
+    leftRacquetH.update();
+    rightRacquetH.update();
+
+  </script>
+
+</body>        
